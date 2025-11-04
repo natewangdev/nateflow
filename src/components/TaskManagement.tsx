@@ -14,7 +14,9 @@ import {
   FiArrowRight,
   FiX,
   FiArrowUp,
-  FiArrowDown
+  FiArrowDown,
+  FiMaximize2,
+  FiMinimize2
 } from "react-icons/fi";
 import type { Action, Task, TaskActionNode } from "../shared/types";
 
@@ -97,6 +99,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [fullScreen, setFullScreen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -106,6 +109,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
       setError(null);
       setSaving(false);
       setIsDraggingOver(false);
+      setFullScreen(false);
     }
   }, [open, task]);
 
@@ -200,11 +204,11 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setError("Task name cannot be empty");
+      setError("任务名称不能为空");
       return;
     }
     if (workflow.length === 0) {
-      setError("Select at least one Action to build the workflow");
+      setError("请至少选择一个动作来构建流程");
       return;
     }
     setError(null);
@@ -217,11 +221,25 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
       });
       onClose();
     } catch (err) {
-      setError((err as Error).message ?? "Failed to save task, please try again later");
+      setError((err as Error).message ?? "保存任务失败，请稍后再试");
     } finally {
       setSaving(false);
     }
   };
+
+  const modalClassName = useMemo(
+    () => (fullScreen ? "modal-card task-modal task-modal--fullscreen" : "modal-card task-modal"),
+    [fullScreen]
+  );
+
+  const toggleFullScreen = useCallback(() => {
+    setFullScreen((prev) => !prev);
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    setFullScreen(false);
+    onClose();
+  }, [onClose]);
 
   if (!open) {
     return null;
@@ -230,48 +248,58 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
   return (
     <div className="modal-backdrop">
       <div
-        className="modal-card task-modal"
+        className={modalClassName}
         role="dialog"
         aria-modal="true"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="modal-card__header">
           <h2 className="modal-card__title">
-            {mode === "edit" ? "Edit Task" : "New Task"}
+            {mode === "edit" ? "编辑任务" : "新建任务"}
           </h2>
+          <div className="task-modal__controls">
+            <button
+              type="button"
+              className="task-modal__icon-button"
+              onClick={toggleFullScreen}
+              aria-label={fullScreen ? "退出全屏" : "进入全屏"}
+            >
+              {fullScreen ? <FiMinimize2 /> : <FiMaximize2 />}
+            </button>
+          </div>
         </div>
         <div className="modal-card__content task-modal__content">
           <div className="field-group">
             <label className="field-label" htmlFor="task-name">
-              Task Name
+              任务名称
             </label>
             <input
               id="task-name"
               className="field-input"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Enter a task name"
+               placeholder="请输入任务名称"
               disabled={saving}
             />
           </div>
           <div className="task-workflow-wrapper">
             <div className="task-actions-library">
               <div className="task-actions-library__header">
-                <h3>Available Actions</h3>
+                <h3>可用动作</h3>
                 <div className="task-actions-library__search">
                   <FiSearch aria-hidden="true" />
                   <input
                     value={actionFilter}
                     onChange={(event) => setActionFilter(event.target.value)}
-                    placeholder="Filter actions"
+                     placeholder="按名称筛选"
                   />
                 </div>
               </div>
               <div className="task-actions-library__list">
                 {loadingActions ? (
-                  <div className="task-actions-library__empty">Loading actions...</div>
+                  <div className="task-actions-library__empty">正在加载动作...</div>
                 ) : filteredActions.length === 0 ? (
-                  <div className="task-actions-library__empty">No actions available</div>
+                  <div className="task-actions-library__empty">暂无动作</div>
                 ) : (
                   filteredActions.map((action) => (
                     <div
@@ -282,7 +310,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
                       onDoubleClick={() => handleAddAction(action)}
                     >
                       <span>{action.name}</span>
-                      <span className="task-actions-library__hint">Drag or double-click to add</span>
+                       <span className="task-actions-library__hint">拖拽或双击添加</span>
                     </div>
                   ))
                 )}
@@ -299,20 +327,18 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
               onDrop={handleCanvasDrop}
             >
               <div className="task-workflow-canvas__header">
-                <h3>Workflow</h3>
+                 <h3>任务流程</h3>
                 <button
                   type="button"
                   className="secondary-button"
                   onClick={() => setWorkflow([])}
                   disabled={workflow.length === 0}
                 >
-                  Clear
+                   清空
                 </button>
               </div>
               {workflow.length === 0 ? (
-                <div className="task-workflow-placeholder">
-                  Drag actions from the left to build this task
-                </div>
+                 <div className="task-workflow-placeholder">从左侧拖入动作以构建任务</div>
               ) : (
                 <div className="task-workflow-sequence">
                   {workflow.map((node, index) => (
@@ -325,7 +351,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
                             className="task-workflow-node__control"
                             onClick={() => handleMove(index, -1)}
                             disabled={index === 0}
-                            aria-label="Move up"
+                             aria-label="上移"
                           >
                             <FiArrowUp />
                           </button>
@@ -334,7 +360,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
                             className="task-workflow-node__control"
                             onClick={() => handleMove(index, 1)}
                             disabled={index === workflow.length - 1}
-                            aria-label="Move down"
+                             aria-label="下移"
                           >
                             <FiArrowDown />
                           </button>
@@ -342,7 +368,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
                             type="button"
                             className="task-workflow-node__control task-workflow-node__control--danger"
                             onClick={() => handleRemove(index)}
-                            aria-label="Remove"
+                             aria-label="移除"
                           >
                             <FiX />
                           </button>
@@ -360,11 +386,11 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
           {error ? <div className="task-modal-error">{error}</div> : null}
         </div>
         <div className="modal-card__footer">
-          <button className="secondary-button" onClick={onClose} disabled={saving}>
-            Cancel
+          <button className="secondary-button" onClick={handleCancel} disabled={saving}>
+            取消
           </button>
           <button className="primary-button" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "保存中..." : "保存"}
           </button>
         </div>
       </div>
@@ -427,7 +453,7 @@ export const TaskManagementProvider: React.FC<TaskManagementProviderProps> = ({
   const saveTask = useCallback(
     async (draft: TaskDraft) => {
       if (!api) {
-        throw new Error("System bridge is not ready, unable to save task");
+        throw new Error("系统桥接尚未准备好，无法保存任务");
       }
       const payload = {
         id: draft.id,
@@ -591,7 +617,7 @@ export const TaskManagementMain: React.FC = () => {
   };
 
   const handleSingleDelete = async (taskId: string, taskName: string) => {
-    const confirmed = window.confirm(`Delete task "${taskName}"? This action cannot be undone.`);
+    const confirmed = window.confirm(`确定删除任务“${taskName}”吗？该操作无法撤销。`);
     if (!confirmed) {
       return;
     }
@@ -600,11 +626,11 @@ export const TaskManagementMain: React.FC = () => {
 
   const handleBatchDelete = async () => {
     if (selectedIds.length === 0) {
-      window.alert("Select at least one task to delete");
+      window.alert("请先选择要删除的任务");
       return;
     }
     const confirmed = window.confirm(
-      `Delete ${selectedIds.length} tasks? This action cannot be undone.`
+      `确定删除选中的 ${selectedIds.length} 个任务吗？该操作无法撤销。`
     );
     if (!confirmed) {
       return;
@@ -620,17 +646,17 @@ export const TaskManagementMain: React.FC = () => {
           <FiSearch aria-hidden="true" />
           <input
             className="task-search__input"
-            placeholder="Search tasks"
+            placeholder="搜索任务"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
           />
         </div>
         <div className="task-header-actions">
           <button className="secondary-button" onClick={handleQuery} disabled={loadingTasks}>
-            Query
+            查询
           </button>
           <button className="secondary-button" onClick={handleReset} disabled={loadingTasks}>
-            Reset
+            重置
           </button>
           <button
             className="danger-button"
@@ -638,10 +664,10 @@ export const TaskManagementMain: React.FC = () => {
             disabled={selectedIds.length === 0}
           >
             <FiTrash />
-            Delete Selected
+            删除所选
           </button>
           <button className="primary-button" onClick={openCreateTask}>
-            New Task
+            新建任务
           </button>
         </div>
       </header>
@@ -651,7 +677,7 @@ export const TaskManagementMain: React.FC = () => {
             <thead>
               <tr>
                 <th style={{ width: "60px" }}>
-                  <label className="task-checkbox" aria-label="Select all tasks on current page">
+                  <label className="task-checkbox" aria-label="选择当前页全部任务">
                     <input
                       type="checkbox"
                       checked={allChecked}
@@ -661,29 +687,29 @@ export const TaskManagementMain: React.FC = () => {
                   </label>
                 </th>
                 <th style={{ width: "80px" }}>#</th>
-                <th>Name</th>
-                <th>Actions</th>
-                <th style={{ width: "160px" }}>Operations</th>
+                <th>名称</th>
+                <th>动作</th>
+                <th style={{ width: "160px" }}>操作</th>
               </tr>
             </thead>
             <tbody>
               {loadingTasks ? (
                 <tr>
                   <td colSpan={5} className="task-table__status">
-                    Loading tasks...
+                    正在加载任务...
                   </td>
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="task-table__status">
-                    {keyword ? "No matching tasks found" : "No tasks available"}
+                    {keyword ? "未找到匹配的任务" : "暂无任务"}
                   </td>
                 </tr>
               ) : (
                 currentItems.map((item, index) => (
                   <tr key={item.id}>
                     <td>
-                      <label className="task-checkbox" aria-label={`Select task ${item.name}`}>
+                      <label className="task-checkbox" aria-label={`选择任务 ${item.name}`}>
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(item.id)}
@@ -705,7 +731,7 @@ export const TaskManagementMain: React.FC = () => {
                           type="button"
                           className="task-action-button"
                           onClick={() => openEditTask(item)}
-                          title="Edit task"
+                          title="编辑任务"
                         >
                           <FiEdit2 />
                         </button>
@@ -713,7 +739,7 @@ export const TaskManagementMain: React.FC = () => {
                           type="button"
                           className="task-action-button task-action-button--danger"
                           onClick={() => void handleSingleDelete(item.id, item.name)}
-                          title="Delete task"
+                          title="删除任务"
                         >
                           <FiTrash2 />
                         </button>
@@ -727,7 +753,7 @@ export const TaskManagementMain: React.FC = () => {
         </div>
         <div className="task-pagination">
           <span>
-            Total {filteredTasks.length} records, {pageSize} per page
+            共 {filteredTasks.length} 条记录，每页 {pageSize} 条
           </span>
           <div className="task-pagination__controls">
             <button
@@ -735,17 +761,17 @@ export const TaskManagementMain: React.FC = () => {
               disabled={page <= 1}
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             >
-              Previous
+              上一页
             </button>
             <span className="task-pagination__info">
-              Page {page} / {totalPages}
+              第 {page} / {totalPages} 页
             </span>
             <button
               className="secondary-button"
               disabled={page >= totalPages}
               onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             >
-              Next
+              下一页
             </button>
           </div>
         </div>

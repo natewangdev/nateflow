@@ -10,6 +10,8 @@ import {
   TaskManagementMain
 } from "../components/TaskManagement";
 import type { Project } from "../shared/types";
+import expandIcon from "../assets/sidebar-expand.svg";
+import collapseIcon from "../assets/sidebar-collapse.svg";
 
 type DashboardTab = "overview" | "plan" | "task" | "action" | "template";
 
@@ -158,12 +160,14 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           }
         >
           <div className="dashboard-sidebar__header">
-            <span>Navigation</span>
+            {!leftCollapsed ? <span>Navigation</span> : null}
             <button
+              type="button"
               className="sidebar-toggle"
               onClick={() => setLeftCollapsed((prev) => !prev)}
+              aria-label={leftCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
-              {leftCollapsed ? "Expand" : "Collapse"}
+              <img src={leftCollapsed ? expandIcon : collapseIcon} alt="" />
             </button>
           </div>
           <nav className="dashboard-menu">
@@ -205,12 +209,14 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 }
               >
                 <div className="dashboard-sidebar__header">
-                  <span>Template Library</span>
+                  {!rightCollapsed ? <span>Template Library</span> : null}
                   <button
+                    type="button"
                     className="sidebar-toggle"
                     onClick={() => setRightCollapsed((prev) => !prev)}
+                    aria-label={rightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                   >
-                    {rightCollapsed ? "Expand" : "Collapse"}
+                    <img src={rightCollapsed ? collapseIcon : expandIcon} alt="" />
                   </button>
                 </div>
                 {!rightCollapsed ? <ActionTemplatePanel /> : null}
@@ -236,12 +242,14 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 }
               >
                 <div className="dashboard-sidebar__header">
-                  <span>Task Sidebar</span>
+                  {!rightCollapsed ? <span>Task Sidebar</span> : null}
                   <button
+                    type="button"
                     className="sidebar-toggle"
                     onClick={() => setRightCollapsed((prev) => !prev)}
+                    aria-label={rightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                   >
-                    {rightCollapsed ? "Expand" : "Collapse"}
+                    <img src={rightCollapsed ? collapseIcon : expandIcon} alt="" />
                   </button>
                 </div>
                 {!rightCollapsed ? (
@@ -263,12 +271,14 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
               }
             >
               <div className="dashboard-sidebar__header">
-                <span>Project Notes</span>
+                {!rightCollapsed ? <span>Project Notes</span> : null}
                 <button
+                  type="button"
                   className="sidebar-toggle"
                   onClick={() => setRightCollapsed((prev) => !prev)}
+                  aria-label={rightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
-                  {rightCollapsed ? "Expand" : "Collapse"}
+                  <img src={rightCollapsed ? collapseIcon : expandIcon} alt="" />
                 </button>
               </div>
               {!rightCollapsed ? (

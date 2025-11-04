@@ -464,9 +464,23 @@ button {
 .sidebar-toggle {
   border: none;
   background: transparent;
-  color: var(--color-primary);
+  padding: 4px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.sidebar-toggle:hover {
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.sidebar-toggle img {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .dashboard-menu {
@@ -1355,14 +1369,48 @@ button {
 }
 
 .task-modal {
-  max-width: 960px;
-  width: 100%;
+  width: min(1080px, 92vw);
+  max-height: 85vh;
+  height: auto;
+}
+
+.task-modal .modal-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.task-modal__controls {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.task-modal__icon-button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 10px;
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.task-modal__icon-button:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
 .task-modal__content {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(85vh - 200px);
 }
 
 .task-modal-error {
@@ -1372,6 +1420,17 @@ button {
   background: rgba(239, 68, 68, 0.12);
   color: #b91c1c;
   font-size: 0.9rem;
+}
+
+.task-modal--fullscreen {
+  width: min(1280px, 96vw);
+  max-width: 96vw;
+  height: 92vh;
+  max-height: 92vh;
+}
+
+.task-modal--fullscreen .task-modal__content {
+  max-height: calc(92vh - 200px);
 }
 
 .task-workflow-wrapper {
@@ -1388,7 +1447,7 @@ button {
   box-shadow: var(--shadow-soft);
   display: flex;
   flex-direction: column;
-  max-height: 420px;
+  max-height: 520px;
 }
 
 .task-actions-library__header {
