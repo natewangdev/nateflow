@@ -339,7 +339,28 @@ const writeTemplate = async (payload: TemplatePayload): Promise<Template> => {
   };
 };
 
+const findActionsUsingTemplate = async (templateId: string) => {
+  const projects = await listProjects();
+  const usages: Array<{ project: Project; action: Action }> = [];
+  for (const project of projects) {
+    const actions = await listActions(project.id);
+    for (const action of actions) {
+      if (action.templateId === templateId) {
+        usages.push({ project, action });
+      }
+    }
+  }
+  return usages;
+};
+
 const deleteTemplate = async (templateId: string) => {
+  const relatedActions = await findActionsUsingTemplate(templateId);
+  if (relatedActions.length > 0) {
+    const summary = relatedActions
+      .map(({ project, action }) => `- 项目「${project.name}」中的 Action「${action.name}」`)
+      .join("\n");
+    throw new Error(`无法删除该模板，以下 Action 正在使用它：\n${summary}`);
+  }
   const filePath = getTemplateFilePath(templateId);
   if (!existsSync(filePath)) {
     return;

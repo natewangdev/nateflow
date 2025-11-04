@@ -8,7 +8,7 @@ interface TemplateModalProps {
   onSave: (payload: { id?: string; name: string; description: string; content: TemplateContent }) => Promise<void> | void;
 }
 
-const defaultJson = '{\n  "key": "value"\n}';
+const defaultJson = '{\n  "key": "@string"\n}';
 
 const stringifyContent = (value: TemplateContent) => {
   return JSON.stringify(value, null, 2);
@@ -74,7 +74,7 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop">
       <div
         className="modal-card"
         onClick={(event) => event.stopPropagation()}

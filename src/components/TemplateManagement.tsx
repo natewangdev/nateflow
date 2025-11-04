@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FiEdit2, FiTrash, FiTrash2 } from "react-icons/fi";
 import TemplateModal from "./TemplateModal";
 import type { Template, TemplateContent } from "../shared/types";
@@ -7,7 +7,7 @@ interface TemplateManagementProps {
   onTotalChange?: (total: number) => void;
 }
 
-const pageSize = 8;
+const pageSize = 15;
 
 const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }) => {
   const api = window.api ?? null;
@@ -345,3 +345,5 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
 };
 
 export default TemplateManagement;
+
+
