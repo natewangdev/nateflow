@@ -1,0 +1,10 @@
+{
+  "id": "234e05d6-93b4-4a0c-97e6-3c3fa85ef263",
+  "name": "测试模板",
+  "description": "这是测试模板",
+  "content": {
+    "key": "@key|string"
+  },
+  "createdAt": "2025-11-02T15:58:25.508Z",
+  "updatedAt": "2025-11-02T16:26:33.251Z"
+}
