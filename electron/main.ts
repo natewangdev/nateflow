@@ -95,8 +95,9 @@ const getDefaultProjectRoot = () => {
   return path.join(resolveDataRoot(), "projects");
 };
 
-const getTemplatesDir = () => {
-  return path.join(resolveDataRoot(), templatesDirName);
+const getTemplatesDir = async () => {
+  const { projectRoot } = await loadSettings();
+  return path.join(projectRoot, templatesDirName);
 };
 
 const appendLog = async (message: string) => {
@@ -145,7 +146,7 @@ const loadSettings = async (): Promise<AppSettings> => {
     ...fileSettings
   };
   await ensureDir(settingsCache.projectRoot);
-  await ensureDir(getTemplatesDir());
+  await ensureDir(path.join(settingsCache.projectRoot, templatesDirName));
   return settingsCache;
 };
 
@@ -156,7 +157,8 @@ const persistSettings = async (next: Partial<AppSettings>) => {
     ...next
   };
   await ensureDir(settingsCache.projectRoot);
-  await ensureDir(getTemplatesDir());
+  const templatesDir = await getTemplatesDir();
+  await ensureDir(templatesDir);
   await writeJSON(getSettingsFilePath(), settingsCache);
   return settingsCache;
 };
@@ -212,8 +214,9 @@ const deleteProject = async (projectId: string) => {
   await fs.rm(targetDir, { recursive: true, force: true });
 };
 
-const getTemplateFilePath = (templateId: string) => {
-  return path.join(getTemplatesDir(), `${templateId}.json`);
+const getTemplateFilePath = async (templateId: string) => {
+  const templatesDir = await getTemplatesDir();
+  return path.join(templatesDir, `${templateId}.json`);
 };
 
 const isPlainObject = (value: unknown): value is TemplateContent => {
@@ -264,18 +267,19 @@ const resolveTemplateContent = (
 };
 
 const listTemplates = async (): Promise<Template[]> => {
-  await ensureDir(getTemplatesDir());
-  const entries = await fs.readdir(getTemplatesDir(), { withFileTypes: true });
+  const templatesDir = await getTemplatesDir();
+  await ensureDir(templatesDir);
+  const entries = await fs.readdir(templatesDir, { withFileTypes: true });
   console.log(`[listTemplates] entries=${entries.length}`);
   const templates: Template[] = [];
   for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".json")) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) {
       continue;
     }
-    const filePath = path.join(getTemplatesDir(), entry.name);
+    const filePath = path.join(templatesDir, entry.name);
     try {
       console.log(`[listTemplates] reading ${filePath}`);
-      const fileContent = await fs.readFile(filePath, "utf-8");
+      const fileContent = await fs.readFile(filePath, 'utf-8');
       const parsed = JSON.parse(fileContent) as {
         id?: string;
         name?: string;
@@ -291,7 +295,7 @@ const listTemplates = async (): Promise<Template[]> => {
       const templateRecord: Template = {
         id: parsed.id,
         name: parsed.name,
-        description: parsed.description ?? "",
+        description: parsed.description ?? '',
         content,
         createdAt: parsed.createdAt ?? new Date().toISOString(),
         updatedAt: parsed.updatedAt ?? new Date().toISOString()
@@ -308,7 +312,7 @@ const listTemplates = async (): Promise<Template[]> => {
         });
       }
     } catch (error) {
-      console.error("读取模板失败: " + filePath, error);
+      console.error('读取模板失败: ' + filePath, error);
     }
   }
   templates.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -316,10 +320,11 @@ const listTemplates = async (): Promise<Template[]> => {
 };
 
 const writeTemplate = async (payload: TemplatePayload): Promise<Template> => {
-  await ensureDir(getTemplatesDir());
+  const templatesDir = await getTemplatesDir();
+  await ensureDir(templatesDir);
   const now = new Date().toISOString();
   const templateId = payload.id ?? randomUUID();
-  const targetFile = getTemplateFilePath(templateId);
+  const targetFile = path.join(templatesDir, `${templateId}.json`);
   const existing = payload.id
     ? await readJSON<Template | null>(targetFile, null).catch(() => null)
     : null;
@@ -327,7 +332,7 @@ const writeTemplate = async (payload: TemplatePayload): Promise<Template> => {
   const stored = {
     id: templateId,
     name: payload.name.trim(),
-    description: payload.description?.trim() ?? existing?.description ?? "",
+    description: payload.description?.trim() ?? existing?.description ?? '',
     content: normalizedContent,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now
@@ -358,10 +363,11 @@ const deleteTemplate = async (templateId: string) => {
   if (relatedActions.length > 0) {
     const summary = relatedActions
       .map(({ project, action }) => `- 项目「${project.name}」中的 Action「${action.name}」`)
-      .join("\n");
+      .join('\n');
     throw new Error(`无法删除该模板，以下 Action 正在使用它：\n${summary}`);
   }
-  const filePath = getTemplateFilePath(templateId);
+  const templatesDir = await getTemplatesDir();
+  const filePath = path.join(templatesDir, `${templateId}.json`);
   if (!existsSync(filePath)) {
     return;
   }

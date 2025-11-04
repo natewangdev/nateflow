@@ -18,6 +18,7 @@ release/
 
 # Runtime data
 data/projects/
+data/templates/
 data/logs/
 
 # Editor directories and files

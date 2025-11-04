@@ -100,7 +100,12 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
     setModalOpen(false);
   };
 
-  const handleSaveTemplate = async (payload: { id?: string; name: string; description: string; content: TemplateContent }) => {
+  const handleSaveTemplate = async (payload: {
+    id?: string;
+    name: string;
+    description: string;
+    content: TemplateContent;
+  }) => {
     if (!api) {
       window.alert("系统桥接尚未就绪，无法保存模板");
       return;
@@ -133,7 +138,7 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
       window.alert("系统桥接尚未就绪，无法删除模板");
       return;
     }
-    const confirmed = window.confirm(`确认删除模板「${template.name}」？`);
+    const confirmed = window.confirm(`确认删除模板「${template.name}」吗？`);
     if (!confirmed) {
       return;
     }
@@ -142,7 +147,7 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
       await fetchTemplates();
     } catch (err) {
       console.error("删除模板失败", err);
-      window.alert("删除模板失败，请稍后再试");
+      window.alert((err as Error).message ?? "删除模板失败，请稍后再试");
     }
   };
 
@@ -159,13 +164,13 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
     }
     try {
       setBatchDeleting(true);
-      await Promise.all(
-        templatesToDelete.map((template) => api.deleteTemplate(template.id))
-      );
+      for (const template of templatesToDelete) {
+        await api.deleteTemplate(template.id);
+      }
       await fetchTemplates();
     } catch (err) {
       console.error("批量删除模板失败", err);
-      window.alert("批量删除模板失败，请稍后再试");
+      window.alert((err as Error).message ?? "批量删除模板失败，请稍后再试");
     } finally {
       setBatchDeleting(false);
     }
@@ -200,27 +205,21 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
               }
             }}
           />
-          <button className="primary-button" onClick={handleQuery} disabled={loading}>
+        </div>
+        <div className="template-header-actions">
+          <button className="secondary-button" onClick={handleQuery} disabled={loading}>
             查询
           </button>
           <button className="secondary-button" onClick={handleReset} disabled={loading}>
             重置
           </button>
-        </div>
-        <div className="template-header-actions">
           <button
-            type="button"
             className="danger-button"
             onClick={handleBatchDelete}
-            disabled={batchDeleting || selectedIds.length === 0 || loading}
+            disabled={batchDeleting || selectedIds.length === 0}
           >
-            {batchDeleting ? (
-              "删除中..."
-            ) : (
-              <>
-                <FiTrash /> 批量删除
-              </>
-            )}
+            <FiTrash />
+            {batchDeleting ? "删除中..." : "批量删除"}
           </button>
           <button className="primary-button" onClick={openCreateModal} disabled={loading}>
             新建模板
@@ -273,9 +272,7 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(template.id)}
-                          onChange={(event) =>
-                            toggleSelectOne(template.id, event.target.checked)
-                          }
+                          onChange={(event) => toggleSelectOne(template.id, event.target.checked)}
                         />
                         <span className="template-checkbox__indicator" />
                       </label>
@@ -296,7 +293,7 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
                         <button
                           type="button"
                           className="template-action-button template-action-button--danger"
-                          onClick={() => handleDeleteTemplate(template)}
+                          onClick={() => void handleDeleteTemplate(template)}
                           title="删除模板"
                         >
                           <FiTrash2 />
@@ -345,5 +342,3 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
 };
 
 export default TemplateManagement;
-
-

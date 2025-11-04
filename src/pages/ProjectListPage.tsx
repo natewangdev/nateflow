@@ -39,13 +39,13 @@ const ProjectListPage: React.FC<ProjectListPageProps> = ({
         style={{ position: "relative" }}
       >
         {loading && projects.length === 0 ? (
-          <div className="empty-placeholder">正在载入项目...</div>
+          <div className="empty-placeholder">姝ｅ湪鍔犺浇椤圭洰...</div>
         ) : null}
         {!loading && projects.length === 0 ? (
           <div className="empty-placeholder">
-            <span>暂无项目，右键空白处或点击下方按钮快速创建一个新项目。</span>
+            <span>褰撳墠杩樻病鏈夐」鐩紝鐐瑰嚮涓嬫柟鎸夐挳蹇�熷垱寤轰竴涓柊椤圭洰鍚э紒</span>
             <button className="primary-button" onClick={onCreateProject}>
-              新建项目
+              鏂板缓椤圭洰
             </button>
           </div>
         ) : null}
@@ -70,3 +70,4 @@ const ProjectListPage: React.FC<ProjectListPageProps> = ({
 };
 
 export default ProjectListPage;
+
