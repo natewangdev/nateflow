@@ -3,6 +3,8 @@ import type {
   AppSettings,
   Action,
   ActionPayload,
+  Task,
+  TaskPayload,
   Project,
   ProjectPayload,
   Template,
@@ -43,7 +45,20 @@ contextBridge.exposeInMainWorld("api", {
   deleteAction: (projectId: string, id: string): Promise<void> =>
     ipcRenderer.invoke("actions:delete", { projectId, id }),
   deleteActions: (projectId: string, ids: string[]): Promise<void> =>
-    ipcRenderer.invoke("actions:deleteMany", { projectId, ids })
+    ipcRenderer.invoke("actions:deleteMany", { projectId, ids }),
+  getTasks: (projectId: string): Promise<Task[]> =>
+    ipcRenderer.invoke("tasks:list", projectId),
+  createTask: (projectId: string, payload: TaskPayload): Promise<Task> =>
+    ipcRenderer.invoke("tasks:create", { projectId, ...payload }),
+  updateTask: (
+    projectId: string,
+    id: string,
+    payload: TaskPayload
+  ): Promise<Task> => ipcRenderer.invoke("tasks:update", { projectId, id, ...payload }),
+  deleteTask: (projectId: string, id: string): Promise<void> =>
+    ipcRenderer.invoke("tasks:delete", { projectId, id }),
+  deleteTasks: (projectId: string, ids: string[]): Promise<void> =>
+    ipcRenderer.invoke("tasks:deleteMany", { projectId, ids })
 });
 
 console.log("预加载已准备完成，window.api 可用");

@@ -5,6 +5,10 @@ import {
   ActionManagementMain,
   ActionTemplatePanel
 } from "../components/ActionManagement";
+import {
+  TaskManagementProvider,
+  TaskManagementMain
+} from "../components/TaskManagement";
 import type { Project } from "../shared/types";
 
 type DashboardTab = "overview" | "plan" | "task" | "action" | "template";
@@ -26,11 +30,11 @@ interface ProjectDashboardProps {
 }
 
 const menuItems: Array<{ key: DashboardTab; label: string; icon: string }> = [
-  { key: "overview", label: "概览", icon: "📊" },
-  { key: "plan", label: "计划管理", icon: "🗂" },
-  { key: "task", label: "任务管理", icon: "✅" },
-  { key: "action", label: "Action 管理", icon: "⚙️" },
-  { key: "template", label: "模板管理", icon: "📚" }
+  { key: "overview", label: "Overview", icon: "O" },
+  { key: "plan", label: "Plans", icon: "P" },
+  { key: "task", label: "Tasks", icon: "T" },
+  { key: "action", label: "Actions", icon: "A" },
+  { key: "template", label: "Templates", icon: "M" }
 ];
 
 const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
@@ -45,11 +49,16 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(true);
   const [templateTotal, setTemplateTotal] = useState(stats?.templateTotal ?? 0);
+  const [taskTotal, setTaskTotal] = useState(stats?.taskTotal ?? 0);
   const [actionTotal, setActionTotal] = useState(stats?.actionTotal ?? 0);
 
   useEffect(() => {
     setTemplateTotal(stats?.templateTotal ?? 0);
   }, [stats?.templateTotal]);
+
+  useEffect(() => {
+    setTaskTotal(stats?.taskTotal ?? 0);
+  }, [stats?.taskTotal]);
 
   useEffect(() => {
     setActionTotal(stats?.actionTotal ?? 0);
@@ -61,28 +70,28 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    if (activeTab !== "action") {
+      setRightCollapsed(true);
+    }
+  }, [activeTab]);
+
   const mergedStats: DashboardStats = useMemo(
     () => ({
       planTotal: stats?.planTotal ?? 0,
-      taskTotal: stats?.taskTotal ?? 0,
+      taskTotal,
       actionTotal,
       templateTotal
     }),
-    [stats, actionTotal, templateTotal]
+    [stats, taskTotal, actionTotal, templateTotal]
   );
 
-  const renderNonActionContent = () => {
+  const renderDefaultContent = () => {
     switch (activeTab) {
       case "plan":
         return (
           <div className="dashboard-panel">
-            计划管理区块暂未实现，可用于展示计划列表、状态筛选与批量操作。
-          </div>
-        );
-      case "task":
-        return (
-          <div className="dashboard-panel">
-            任务管理区块暂未实现，可展示任务清单、执行进度以及分配信息。
+            Plan management is coming soon.
           </div>
         );
       case "template":
@@ -99,19 +108,19 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         return (
           <div className="dashboard-overview-grid">
             <div className="dashboard-overview-card">
-              <span className="dashboard-overview-label">计划数量</span>
+              <span className="dashboard-overview-label">Plans</span>
               <strong className="dashboard-overview-value">{mergedStats.planTotal}</strong>
             </div>
             <div className="dashboard-overview-card">
-              <span className="dashboard-overview-label">任务数量</span>
+              <span className="dashboard-overview-label">Tasks</span>
               <strong className="dashboard-overview-value">{mergedStats.taskTotal}</strong>
             </div>
             <div className="dashboard-overview-card">
-              <span className="dashboard-overview-label">Action 数量</span>
+              <span className="dashboard-overview-label">Actions</span>
               <strong className="dashboard-overview-value">{mergedStats.actionTotal}</strong>
             </div>
             <div className="dashboard-overview-card">
-              <span className="dashboard-overview-label">模板数量</span>
+              <span className="dashboard-overview-label">Templates</span>
               <strong className="dashboard-overview-value">{mergedStats.templateTotal}</strong>
             </div>
           </div>
@@ -119,6 +128,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     }
   };
 
+  const isTaskTab = activeTab === "task";
   const isActionTab = activeTab === "action";
 
   return (
@@ -126,16 +136,16 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
       <header className="dashboard-header">
         <div className="dashboard-header-left">
           <button className="secondary-button" onClick={onBack}>
-            返回项目
+            Back to Projects
           </button>
           <h1 className="dashboard-title">{project.name}</h1>
         </div>
         <div className="dashboard-header-actions">
           <button className="secondary-button" onClick={() => onEditProject?.(project)}>
-            编辑项目
+            Edit Project
           </button>
           <button className="icon-button" onClick={onOpenSettings}>
-            ⚙️ 设置
+            ⚙ Settings
           </button>
         </div>
       </header>
@@ -148,12 +158,12 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           }
         >
           <div className="dashboard-sidebar__header">
-            <span>功能区</span>
+            <span>Navigation</span>
             <button
               className="sidebar-toggle"
               onClick={() => setLeftCollapsed((prev) => !prev)}
             >
-              {leftCollapsed ? "展开" : "收起"}
+              {leftCollapsed ? "Expand" : "Collapse"}
             </button>
           </div>
           <nav className="dashboard-menu">
@@ -195,21 +205,56 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 }
               >
                 <div className="dashboard-sidebar__header">
-                  <span>模板列表</span>
+                  <span>Template Library</span>
                   <button
                     className="sidebar-toggle"
                     onClick={() => setRightCollapsed((prev) => !prev)}
                   >
-                    {rightCollapsed ? "展开" : "收起"}
+                    {rightCollapsed ? "Expand" : "Collapse"}
                   </button>
                 </div>
                 {!rightCollapsed ? <ActionTemplatePanel /> : null}
               </aside>
             </>
           </ActionManagementProvider>
+        ) : isTaskTab ? (
+          <TaskManagementProvider
+            projectId={project.id}
+            onTotalChange={(total) => {
+              setTaskTotal(total);
+            }}
+          >
+            <>
+              <main className="dashboard-content">
+                <TaskManagementMain />
+              </main>
+              <aside
+                className={
+                  rightCollapsed
+                    ? "dashboard-right dashboard-right--collapsed"
+                    : "dashboard-right"
+                }
+              >
+                <div className="dashboard-sidebar__header">
+                  <span>Task Sidebar</span>
+                  <button
+                    className="sidebar-toggle"
+                    onClick={() => setRightCollapsed((prev) => !prev)}
+                  >
+                    {rightCollapsed ? "Expand" : "Collapse"}
+                  </button>
+                </div>
+                {!rightCollapsed ? (
+                  <div className="dashboard-right__content">
+                    Task insights will appear here in a future update.
+                  </div>
+                ) : null}
+              </aside>
+            </>
+          </TaskManagementProvider>
         ) : (
           <>
-            <main className="dashboard-content">{renderNonActionContent()}</main>
+            <main className="dashboard-content">{renderDefaultContent()}</main>
             <aside
               className={
                 rightCollapsed
@@ -218,17 +263,17 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
               }
             >
               <div className="dashboard-sidebar__header">
-                <span>辅助信息</span>
+                <span>Project Notes</span>
                 <button
                   className="sidebar-toggle"
                   onClick={() => setRightCollapsed((prev) => !prev)}
                 >
-                  {rightCollapsed ? "展开" : "收起"}
+                  {rightCollapsed ? "Expand" : "Collapse"}
                 </button>
               </div>
               {!rightCollapsed ? (
                 <div className="dashboard-right__content">
-                  这里可以展示项目动态、团队信息或其他常用小组件。
+                  Use this area to capture project highlights or reminders.
                 </div>
               ) : null}
             </aside>

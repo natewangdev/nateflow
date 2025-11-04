@@ -57,3 +57,24 @@ export interface ActionPayload {
   templateName: string;
   content: ActionContent;
 }
+
+export interface TaskActionNode {
+  id: string;
+  name: string;
+  content: ActionContent;
+}
+
+export interface Task {
+  id: string;
+  projectId: string;
+  name: string;
+  actions: TaskActionNode[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskPayload {
+  id?: string;
+  name: string;
+  actions: TaskActionNode[];
+}

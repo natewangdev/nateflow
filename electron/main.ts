@@ -14,6 +14,9 @@ import type {
   Template,
   TemplateContent,
   TemplatePayload,
+  Task,
+  TaskActionNode,
+  TaskPayload,
   ThemeMode
 } from "../src/shared/types";
 
@@ -499,6 +502,137 @@ const deleteActions = async (projectId: string, ids: string[]) => {
   }
 };
 
+const getTasksDir = async (projectId: string) => {
+  return path.join(await getProjectPath(projectId), "tasks");
+};
+
+const getTaskFilePath = async (projectId: string, taskId: string) => {
+  return path.join(await getTasksDir(projectId), `${taskId}.json`);
+};
+
+const sanitizeTaskActions = (raw: unknown): TaskActionNode[] => {
+  if (!Array.isArray(raw)) {
+    throw new Error("Task actions 必须是数组");
+  }
+  return raw.map((item, index) => {
+    if (typeof item !== "object" || item === null) {
+      throw new Error(`Task actions[${index}] 不是有效的对象`);
+    }
+    const candidate = item as Partial<TaskActionNode>;
+    if (!candidate.id || typeof candidate.id !== "string" || !candidate.id.trim()) {
+      throw new Error(`Task actions[${index}] 缺少有效的 id`);
+    }
+    if (!candidate.name || typeof candidate.name !== "string" || !candidate.name.trim()) {
+      throw new Error(`Task actions[${index}] 缺少有效的名称`);
+    }
+    const normalizedContent = sanitizeActionContent(candidate.content ?? {});
+    return {
+      id: candidate.id.trim(),
+      name: candidate.name.trim(),
+      content: normalizedContent
+    };
+  });
+};
+
+const listTasks = async (projectId: string): Promise<Task[]> => {
+  const tasksDir = await getTasksDir(projectId);
+  await ensureDir(tasksDir);
+  const entries = await fs.readdir(tasksDir, { withFileTypes: true });
+  const tasks: Task[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) {
+      continue;
+    }
+    const filePath = path.join(tasksDir, entry.name);
+    try {
+      const raw = await fs.readFile(filePath, "utf-8");
+      const parsed = JSON.parse(raw) as {
+        id?: string;
+        name?: string;
+        actions?: unknown;
+        createdAt?: string;
+        updatedAt?: string;
+      };
+      if (!parsed.id || !parsed.name) {
+        continue;
+      }
+      let actions: TaskActionNode[] = [];
+      try {
+        actions = sanitizeTaskActions(parsed.actions ?? []);
+      } catch (error) {
+        console.warn("解析 Task actions 失败，将返回空数组", error);
+      }
+      const createdAt =
+        typeof parsed.createdAt === "string" ? parsed.createdAt : new Date().toISOString();
+      const updatedAt = typeof parsed.updatedAt === "string" ? parsed.updatedAt : createdAt;
+      tasks.push({
+        id: parsed.id,
+        projectId,
+        name: parsed.name,
+        actions,
+        createdAt,
+        updatedAt
+      });
+    } catch (error) {
+      console.error("读取 Task 失败: " + filePath, error);
+    }
+  }
+  tasks.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  return tasks;
+};
+
+const writeTask = async (projectId: string, payload: TaskPayload): Promise<Task> => {
+  if (!payload.name?.trim()) {
+    throw new Error("Task 名称不能为空");
+  }
+  const tasksDir = await getTasksDir(projectId);
+  await ensureDir(tasksDir);
+  const now = new Date().toISOString();
+  const taskId = payload.id ?? randomUUID();
+  const targetFile = await getTaskFilePath(projectId, taskId);
+  const existing = payload.id
+    ? await readJSON<Record<string, unknown> | null>(targetFile, null).catch(() => null)
+    : null;
+  let createdAt = now;
+  if (existing && typeof existing === "object") {
+    const maybeCreated = existing["createdAt"];
+    if (typeof maybeCreated === "string") {
+      createdAt = maybeCreated;
+    }
+  }
+  const normalizedActions = sanitizeTaskActions(payload.actions);
+  const stored = {
+    id: taskId,
+    name: payload.name.trim(),
+    actions: normalizedActions,
+    createdAt,
+    updatedAt: now
+  };
+  await writeJSON(targetFile, stored);
+  return {
+    id: taskId,
+    projectId,
+    name: stored.name,
+    actions: normalizedActions,
+    createdAt,
+    updatedAt: now
+  };
+};
+
+const deleteTask = async (projectId: string, taskId: string) => {
+  const filePath = await getTaskFilePath(projectId, taskId);
+  if (!existsSync(filePath)) {
+    return;
+  }
+  await fs.rm(filePath, { force: true });
+};
+
+const deleteTasks = async (projectId: string, ids: string[]) => {
+  for (const id of ids) {
+    await deleteTask(projectId, id);
+  }
+};
+
 const resolveFromRoots = (...segments: string[]) => {
   const runtimeCandidate = path.join(runtimeRoot, ...segments);
   if (existsSync(runtimeCandidate)) {
@@ -735,6 +869,61 @@ const registerIpcHandlers = () => {
         return;
       }
       await deleteActions(payload.projectId, payload.ids.filter(Boolean));
+    }
+  );
+  ipcMain.handle("tasks:list", async (_event, projectId: string) => {
+    if (!projectId) {
+      throw new Error("缺少项目标识");
+    }
+    return listTasks(projectId);
+  });
+
+  ipcMain.handle("tasks:create", async (_event, payload: TaskPayload & { projectId: string }) => {
+    if (!payload.projectId) {
+      throw new Error("缺少项目标识");
+    }
+    if (!payload.name?.trim()) {
+      throw new Error("Task 名称不能为空");
+    }
+    return writeTask(payload.projectId, payload);
+  });
+
+  ipcMain.handle("tasks:update", async (_event, payload: TaskPayload & { id: string; projectId: string }) => {
+    if (!payload.projectId) {
+      throw new Error("缺少项目标识");
+    }
+    if (!payload.id) {
+      throw new Error("缺少 Task 标识");
+    }
+    if (!payload.name?.trim()) {
+      throw new Error("Task 名称不能为空");
+    }
+    return writeTask(payload.projectId, payload);
+  });
+
+  ipcMain.handle(
+    "tasks:delete",
+    async (_event, payload: { projectId: string; id: string }) => {
+      if (!payload?.projectId) {
+        throw new Error("缺少项目标识");
+      }
+      if (!payload.id) {
+        throw new Error("缺少 Task 标识");
+      }
+      await deleteTask(payload.projectId, payload.id);
+    }
+  );
+
+  ipcMain.handle(
+    "tasks:deleteMany",
+    async (_event, payload: { projectId: string; ids: string[] }) => {
+      if (!payload?.projectId) {
+        throw new Error("缺少项目标识");
+      }
+      if (!Array.isArray(payload.ids) || payload.ids.length === 0) {
+        return;
+      }
+      await deleteTasks(payload.projectId, payload.ids.filter(Boolean));
     }
   );
   ipcMain.handle("templates:list", async () => {
