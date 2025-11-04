@@ -419,7 +419,7 @@ button {
 
 .dashboard-sidebar,
 .dashboard-right {
-  width: 240px;
+  width: 720px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 20px;
@@ -428,6 +428,10 @@ button {
   display: flex;
   flex-direction: column;
   transition: width 0.25s ease, padding 0.25s ease;
+}
+
+.dashboard-sidebar {
+  width: 240px;
 }
 
 .dashboard-sidebar--collapsed,
@@ -1006,28 +1010,65 @@ button {
 }
 
 .action-template-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
 .action-template-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: var(--shadow-soft);
+  width: 152px;
+  height: 104px;
+  background: rgba(99, 132, 255, 0.15);
+  border-radius: 12px;
+  border: 1px solid rgba(99, 132, 255, 0.25);
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  box-shadow: 0 6px 12px rgba(99, 132, 255, 0.12);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .action-template-card:hover,
 .action-template-card:focus-visible {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 18px rgba(99, 132, 255, 0.18);
+  outline: none;
+  background: rgba(99, 132, 255, 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  .action-template-card {
+    background: rgba(96, 165, 250, 0.16);
+    border-color: rgba(148, 163, 184, 0.35);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.45);
+  }
+
+  .action-template-card:hover,
+  .action-template-card:focus-visible {
+    background: rgba(96, 165, 250, 0.26);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.55);
+  }
+}
+
+[data-theme="dark"] .action-template-card {
+  background: rgba(96, 165, 250, 0.16);
+  border-color: rgba(148, 163, 184, 0.35);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.45);
+}
+
+[data-theme="dark"] .action-template-card:hover,
+[data-theme="dark"] .action-template-card:focus-visible {
+  background: rgba(96, 165, 250, 0.26);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.55);
+}
+
+.action-template-card:hover,
+.action-template-card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 18px rgba(99, 132, 255, 0.18);
   outline: none;
 }
 
@@ -1035,17 +1076,6 @@ button {
   font-size: 1rem;
   font-weight: 600;
   color: var(--color-text);
-}
-
-.action-template-card__desc {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  min-height: 40px;
-}
-
-.action-template-card__hint {
-  font-size: 0.75rem;
-  color: var(--color-primary);
 }
 
 .action-modal {

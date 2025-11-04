@@ -971,10 +971,6 @@ export const ActionTemplatePanel: React.FC = () => {
               }}
             >
               <h3 className="action-template-card__title">{template.name}</h3>
-              <p className="action-template-card__desc">
-                {template.description ? template.description : "暂无描述"}
-              </p>
-              <span className="action-template-card__hint">双击创建 Action</span>
             </div>
           ))}
         </div>
