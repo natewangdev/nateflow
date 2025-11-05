@@ -22,6 +22,7 @@
       "dist/**/*",
       "dist-electron/**/*",
       "electron/**/*",
+      "resources/**/*",
       "package.json"
     ],
     "win": {

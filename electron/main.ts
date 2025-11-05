@@ -950,8 +950,10 @@ const createMainWindow = async () => {
     minWidth: 960,
     minHeight: 640,
     backgroundColor: "#ffffff",
+    title: "NateFlow",
     titleBarStyle: "hiddenInset",
     show: false,
+    icon: resolveFromRoots("resources", "icons", "nateflow.png"),
     webPreferences: {
       preload: resolvePreload(),
       contextIsolation: true,
@@ -1019,6 +1021,7 @@ const createMainWindow = async () => {
     if (!mainWindow) {
       return;
     }
+    mainWindow.setMenu(null);
     mainWindow.maximize();
     mainWindow.show();
   });
