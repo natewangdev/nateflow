@@ -58,17 +58,11 @@ export interface ActionPayload {
   content: ActionContent;
 }
 
-export interface TaskActionNode {
-  id: string;
-  name: string;
-  content: ActionContent;
-}
-
 export interface Task {
   id: string;
   projectId: string;
   name: string;
-  actions: TaskActionNode[];
+  actionIds: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -76,5 +70,51 @@ export interface Task {
 export interface TaskPayload {
   id?: string;
   name: string;
-  actions: TaskActionNode[];
+  actionIds: string[];
+}
+
+export type PlanRepeat = [number, number];
+
+export interface PlanTaskRef {
+  id: string;
+  repeat: PlanRepeat;
+}
+
+export interface Plan {
+  id: string;
+  projectId: string;
+  name: string;
+  tasks: PlanTaskRef[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlanPayload {
+  id?: string;
+  name: string;
+  tasks: PlanTaskRef[];
+}
+
+export interface PlanPreviewAction {
+  id: string;
+  name: string;
+  templateId: string;
+  templateName: string;
+  content: ActionContent;
+}
+
+export interface PlanPreviewTask {
+  id: string;
+  name: string;
+  repeat: PlanRepeat;
+  actions: PlanPreviewAction[];
+}
+
+export interface PlanPreview {
+  id: string;
+  projectId: string;
+  name: string;
+  tasks: PlanPreviewTask[];
+  createdAt: string;
+  updatedAt: string;
 }

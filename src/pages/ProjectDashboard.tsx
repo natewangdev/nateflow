@@ -9,6 +9,10 @@ import {
   TaskManagementProvider,
   TaskManagementMain
 } from "../components/TaskManagement";
+import {
+  PlanManagementProvider,
+  PlanManagementMain
+} from "../components/PlanManagement";
 import type { Project } from "../shared/types";
 import expandIcon from "../assets/sidebar-expand.svg";
 import collapseIcon from "../assets/sidebar-collapse.svg";
@@ -50,9 +54,14 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(true);
+  const [planTotal, setPlanTotal] = useState(stats?.planTotal ?? 0);
   const [templateTotal, setTemplateTotal] = useState(stats?.templateTotal ?? 0);
   const [taskTotal, setTaskTotal] = useState(stats?.taskTotal ?? 0);
   const [actionTotal, setActionTotal] = useState(stats?.actionTotal ?? 0);
+
+  useEffect(() => {
+    setPlanTotal(stats?.planTotal ?? 0);
+  }, [stats?.planTotal]);
 
   useEffect(() => {
     setTemplateTotal(stats?.templateTotal ?? 0);
@@ -80,22 +89,16 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
 
   const mergedStats: DashboardStats = useMemo(
     () => ({
-      planTotal: stats?.planTotal ?? 0,
+      planTotal,
       taskTotal,
       actionTotal,
       templateTotal
     }),
-    [stats, taskTotal, actionTotal, templateTotal]
+    [planTotal, taskTotal, actionTotal, templateTotal]
   );
 
   const renderDefaultContent = () => {
     switch (activeTab) {
-      case "plan":
-        return (
-          <div className="dashboard-panel">
-            Plan management is coming soon.
-          </div>
-        );
       case "template":
         return (
           <TemplateManagement
@@ -130,6 +133,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     }
   };
 
+  const isPlanTab = activeTab === "plan";
   const isTaskTab = activeTab === "task";
   const isActionTab = activeTab === "action";
 
@@ -223,6 +227,43 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
               </aside>
             </>
           </ActionManagementProvider>
+        ) : isPlanTab ? (
+          <PlanManagementProvider
+            projectId={project.id}
+            onTotalChange={(total) => {
+              setPlanTotal(total);
+            }}
+          >
+            <>
+              <main className="dashboard-content">
+                <PlanManagementMain />
+              </main>
+              <aside
+                className={
+                  rightCollapsed
+                    ? "dashboard-right dashboard-right--collapsed"
+                    : "dashboard-right"
+                }
+              >
+                <div className="dashboard-sidebar__header">
+                  {!rightCollapsed ? <span>Plan 提示</span> : null}
+                  <button
+                    type="button"
+                    className="sidebar-toggle"
+                    onClick={() => setRightCollapsed((prev) => !prev)}
+                    aria-label={rightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  >
+                    <img src={rightCollapsed ? collapseIcon : expandIcon} alt="" />
+                  </button>
+                </div>
+                {!rightCollapsed ? (
+                  <div className="dashboard-right__content">
+                    在此区域展示 Plan 的执行提示或统计信息。
+                  </div>
+                ) : null}
+              </aside>
+            </>
+          </PlanManagementProvider>
         ) : isTaskTab ? (
           <TaskManagementProvider
             projectId={project.id}

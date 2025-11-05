@@ -8,7 +8,10 @@ import type {
   Project,
   ProjectPayload,
   Template,
-  TemplatePayload
+  TemplatePayload,
+  Plan,
+  PlanPayload,
+  PlanPreview
 } from "../src/shared/types";
 
 contextBridge.exposeInMainWorld("api", {
@@ -58,7 +61,22 @@ contextBridge.exposeInMainWorld("api", {
   deleteTask: (projectId: string, id: string): Promise<void> =>
     ipcRenderer.invoke("tasks:delete", { projectId, id }),
   deleteTasks: (projectId: string, ids: string[]): Promise<void> =>
-    ipcRenderer.invoke("tasks:deleteMany", { projectId, ids })
+    ipcRenderer.invoke("tasks:deleteMany", { projectId, ids }),
+  getPlans: (projectId: string): Promise<Plan[]> =>
+    ipcRenderer.invoke("plans:list", projectId),
+  createPlan: (projectId: string, payload: PlanPayload): Promise<Plan> =>
+    ipcRenderer.invoke("plans:create", { projectId, ...payload }),
+  updatePlan: (
+    projectId: string,
+    id: string,
+    payload: PlanPayload
+  ): Promise<Plan> => ipcRenderer.invoke("plans:update", { projectId, id, ...payload }),
+  deletePlan: (projectId: string, id: string): Promise<void> =>
+    ipcRenderer.invoke("plans:delete", { projectId, id }),
+  deletePlans: (projectId: string, ids: string[]): Promise<void> =>
+    ipcRenderer.invoke("plans:deleteMany", { projectId, ids }),
+  previewPlan: (projectId: string, id: string): Promise<PlanPreview> =>
+    ipcRenderer.invoke("plans:preview", { projectId, id })
 });
 
 console.log("预加载已准备完成，window.api 可用");

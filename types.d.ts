@@ -7,7 +7,10 @@ import type {
   Project,
   ProjectPayload,
   Template,
-  TemplatePayload
+  TemplatePayload,
+  Plan,
+  PlanPayload,
+  PlanPreview
 } from "./src/shared/types";
 
 declare global {
@@ -38,6 +41,12 @@ declare global {
       updateTask(projectId: string, id: string, payload: TaskPayload): Promise<Task>;
       deleteTask(projectId: string, id: string): Promise<void>;
       deleteTasks(projectId: string, ids: string[]): Promise<void>;
+      getPlans(projectId: string): Promise<Plan[]>;
+      createPlan(projectId: string, payload: PlanPayload): Promise<Plan>;
+      updatePlan(projectId: string, id: string, payload: PlanPayload): Promise<Plan>;
+      deletePlan(projectId: string, id: string): Promise<void>;
+      deletePlans(projectId: string, ids: string[]): Promise<void>;
+      previewPlan(projectId: string, id: string): Promise<PlanPreview>;
     };
   }
 }

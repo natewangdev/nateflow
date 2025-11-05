@@ -18,7 +18,7 @@ import {
   FiMaximize2,
   FiMinimize2
 } from "react-icons/fi";
-import type { Action, Task, TaskActionNode } from "../shared/types";
+import type { Action, Task } from "../shared/types";
 
 interface TaskManagementProviderProps {
   projectId: string;
@@ -37,7 +37,7 @@ interface ModalState {
 interface TaskDraft {
   id?: string;
   name: string;
-  actions: TaskActionNode[];
+  actionIds: string[];
 }
 
 interface TaskContextValue {
@@ -76,14 +76,6 @@ interface TaskWorkflowModalProps {
 
 const DRAG_DATA_KEY = "application/x-task-action";
 
-const cloneActionContent = (content: unknown) => {
-  try {
-    return JSON.parse(JSON.stringify(content ?? {}));
-  } catch {
-    return {};
-  }
-};
-
 const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
   open,
   mode,
@@ -94,7 +86,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
   onSave
 }) => {
   const [name, setName] = useState("");
-  const [workflow, setWorkflow] = useState<TaskActionNode[]>([]);
+  const [workflow, setWorkflow] = useState<string[]>([]);
   const [actionFilter, setActionFilter] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +96,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
   useEffect(() => {
     if (open) {
       setName(task?.name ?? "");
-      setWorkflow(task?.actions ?? []);
+      setWorkflow(task?.actionIds ?? []);
       setActionFilter("");
       setError(null);
       setSaving(false);
@@ -112,6 +104,14 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
       setFullScreen(false);
     }
   }, [open, task]);
+
+  const actionMap = useMemo(() => {
+    const map = new Map<string, Action>();
+    actions.forEach((item) => {
+      map.set(item.id, item);
+    });
+    return map;
+  }, [actions]);
 
   const filteredActions = useMemo(() => {
     if (!actionFilter.trim()) {
@@ -152,15 +152,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
         if (payload.source === "library" && payload.actionId) {
           const action = actions.find((item) => item.id === payload.actionId);
           if (action) {
-            const clonedContent = cloneActionContent(action.content);
-            setWorkflow((prev) => [
-              ...prev,
-              {
-                id: action.id,
-                name: action.name,
-                content: clonedContent
-              }
-            ]);
+            setWorkflow((prev) => [...prev, action.id]);
           }
         }
       } catch (error) {
@@ -172,15 +164,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
 
   const handleAddAction = useCallback(
     (action: Action) => {
-      const clonedContent = cloneActionContent(action.content);
-      setWorkflow((prev) => [
-        ...prev,
-        {
-          id: action.id,
-          name: action.name,
-          content: clonedContent
-        }
-      ]);
+      setWorkflow((prev) => [...prev, action.id]);
     },
     []
   );
@@ -217,7 +201,7 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
       await onSave({
         id: task?.id,
         name: name.trim(),
-        actions: workflow
+        actionIds: workflow
       });
       onClose();
     } catch (err) {
@@ -342,44 +326,48 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
                   <div className="task-workflow-placeholder">从左侧拖入动作以构建任务</div>
                 ) : (
                   <div className="task-workflow-sequence">
-                    {workflow.map((node, index) => (
-                      <div key={`${node.id}-${index}`} className="task-workflow-sequence__item">
-                        <div className="task-workflow-node">
-                          <div className="task-workflow-node__name">{node.name}</div>
-                          <div className="task-workflow-node__controls">
-                            <button
-                              type="button"
-                              className="task-workflow-node__control"
-                              onClick={() => handleMove(index, -1)}
-                              disabled={index === 0}
-                              aria-label="上移"
-                            >
-                              <FiArrowUp />
-                            </button>
-                            <button
-                              type="button"
-                              className="task-workflow-node__control"
-                              onClick={() => handleMove(index, 1)}
-                              disabled={index === workflow.length - 1}
-                              aria-label="下移"
-                            >
-                              <FiArrowDown />
-                            </button>
-                            <button
-                              type="button"
-                              className="task-workflow-node__control task-workflow-node__control--danger"
-                              onClick={() => handleRemove(index)}
-                              aria-label="移除"
-                            >
-                              <FiX />
-                            </button>
+                    {workflow.map((actionId, index) => {
+                      const action = actionMap.get(actionId);
+                      const displayName = action ? action.name : `未找到动作 (${actionId})`;
+                      return (
+                        <div key={`${actionId}-${index}`} className="task-workflow-sequence__item">
+                          <div className="task-workflow-node">
+                            <div className="task-workflow-node__name">{displayName}</div>
+                            <div className="task-workflow-node__controls">
+                              <button
+                                type="button"
+                                className="task-workflow-node__control"
+                                onClick={() => handleMove(index, -1)}
+                                disabled={index === 0}
+                                aria-label="上移"
+                              >
+                                <FiArrowUp />
+                              </button>
+                              <button
+                                type="button"
+                                className="task-workflow-node__control"
+                                onClick={() => handleMove(index, 1)}
+                                disabled={index === workflow.length - 1}
+                                aria-label="下移"
+                              >
+                                <FiArrowDown />
+                              </button>
+                              <button
+                                type="button"
+                                className="task-workflow-node__control task-workflow-node__control--danger"
+                                onClick={() => handleRemove(index)}
+                                aria-label="移除"
+                              >
+                                <FiX />
+                              </button>
+                            </div>
                           </div>
+                          {index < workflow.length - 1 ? (
+                            <FiArrowRight className="task-workflow-arrow" aria-hidden="true" />
+                          ) : null}
                         </div>
-                        {index < workflow.length - 1 ? (
-                          <FiArrowRight className="task-workflow-arrow" aria-hidden="true" />
-                        ) : null}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -460,7 +448,7 @@ export const TaskManagementProvider: React.FC<TaskManagementProviderProps> = ({
       const payload = {
         id: draft.id,
         name: draft.name,
-        actions: draft.actions
+        actionIds: draft.actionIds
       };
       if (draft.id) {
         await api.updateTask(projectId, draft.id, payload);
@@ -552,6 +540,7 @@ export const TaskManagementProvider: React.FC<TaskManagementProviderProps> = ({
 export const TaskManagementMain: React.FC = () => {
   const {
     tasks,
+    actions,
     loadingTasks,
     openCreateTask,
     openEditTask,
@@ -562,6 +551,14 @@ export const TaskManagementMain: React.FC = () => {
   const [keyword, setKeyword] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+
+  const actionsMap = useMemo(() => {
+    const map = new Map<string, Action>();
+    actions.forEach((item) => {
+      map.set(item.id, item);
+    });
+    return map;
+  }, [actions]);
 
   useEffect(() => {
     setSelectedIds([]);
@@ -723,9 +720,11 @@ export const TaskManagementMain: React.FC = () => {
                     <td>{begin + index + 1}</td>
                     <td>{item.name}</td>
                     <td>
-                      {item.actions.length === 0
+                      {item.actionIds.length === 0
                         ? "-"
-                        : item.actions.map((action) => action.name).join(", ")}
+                        : item.actionIds
+                            .map((actionId) => actionsMap.get(actionId)?.name ?? `(${actionId})`)
+                            .join(", ")}
                     </td>
                     <td>
                       <div className="task-table__actions">
