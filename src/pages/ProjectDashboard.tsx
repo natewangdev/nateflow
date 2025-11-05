@@ -10,6 +10,16 @@ import {
   TaskManagementMain
 } from "../components/TaskManagement";
 import {
+  FiHome,
+  FiLayers,
+  FiCheckSquare,
+  FiZap,
+  FiGrid,
+  FiArrowLeft,
+  FiSettings,
+  FiEdit2
+} from "react-icons/fi";
+import {
   PlanManagementProvider,
   PlanManagementMain
 } from "../components/PlanManagement";
@@ -35,12 +45,12 @@ interface ProjectDashboardProps {
   onTemplateTotalChange?: (total: number) => void;
 }
 
-const menuItems: Array<{ key: DashboardTab; label: string; icon: string }> = [
-  { key: "overview", label: "Overview", icon: "O" },
-  { key: "plan", label: "Plans", icon: "P" },
-  { key: "task", label: "Tasks", icon: "T" },
-  { key: "action", label: "Actions", icon: "A" },
-  { key: "template", label: "Templates", icon: "M" }
+const menuItems: Array<{ key: DashboardTab; label: string; icon: React.ComponentType }> = [
+  { key: "overview", label: "总览", icon: FiHome },
+  { key: "plan", label: "计划", icon: FiLayers },
+  { key: "task", label: "任务", icon: FiCheckSquare },
+  { key: "action", label: "动作", icon: FiZap },
+  { key: "template", label: "模板", icon: FiGrid }
 ];
 
 const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
@@ -141,17 +151,35 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     <div className="dashboard-shell">
       <header className="dashboard-header">
         <div className="dashboard-header-left">
-          <button className="secondary-button" onClick={onBack}>
-            Back to Projects
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onBack}
+            aria-label="返回项目列表"
+            title="返回项目列表"
+          >
+            <FiArrowLeft />
           </button>
           <h1 className="dashboard-title">{project.name}</h1>
         </div>
         <div className="dashboard-header-actions">
-          <button className="secondary-button" onClick={() => onEditProject?.(project)}>
-            Edit Project
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => onEditProject?.(project)}
+            aria-label="编辑项目"
+            title="编辑项目"
+          >
+            <FiEdit2 />
           </button>
-          <button className="icon-button" onClick={onOpenSettings}>
-            ⚙ Settings
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onOpenSettings}
+            aria-label="系统设置"
+            title="系统设置"
+          >
+            <FiSettings />
           </button>
         </div>
       </header>
@@ -164,7 +192,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           }
         >
           <div className="dashboard-sidebar__header">
-            {!leftCollapsed ? <span>Navigation</span> : null}
+            {!leftCollapsed ? <span>导航</span> : null}
             <button
               type="button"
               className="sidebar-toggle"
@@ -187,7 +215,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 title={leftCollapsed ? item.label : undefined}
               >
                 <span className="dashboard-menu__icon" aria-hidden="true">
-                  {item.icon}
+                  {React.createElement(item.icon)}
                 </span>
                 {!leftCollapsed ? <span>{item.label}</span> : null}
               </div>
