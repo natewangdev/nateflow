@@ -951,6 +951,7 @@ const createMainWindow = async () => {
     minHeight: 640,
     backgroundColor: "#ffffff",
     titleBarStyle: "hiddenInset",
+    show: false,
     webPreferences: {
       preload: resolvePreload(),
       contextIsolation: true,
@@ -1012,6 +1013,14 @@ const createMainWindow = async () => {
 
   mainWindow.webContents.on("unresponsive", () => {
     console.error("Renderer process became unresponsive");
+  });
+
+  mainWindow.once("ready-to-show", () => {
+    if (!mainWindow) {
+      return;
+    }
+    mainWindow.maximize();
+    mainWindow.show();
   });
 
   if (rendererTarget.type === "url") {

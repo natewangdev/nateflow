@@ -70,6 +70,33 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
   const [actionTotal, setActionTotal] = useState(stats?.actionTotal ?? 0);
 
   useEffect(() => {
+    let cancelled = false;
+    const preloadStats = async () => {
+      if (!window.api) {
+        return;
+      }
+      try {
+        const [plans, tasks, actions] = await Promise.all([
+          window.api.getPlans(project.id),
+          window.api.getTasks(project.id),
+          window.api.getActions(project.id)
+        ]);
+        if (!cancelled) {
+          setPlanTotal(plans.length);
+          setTaskTotal(tasks.length);
+          setActionTotal(actions.length);
+        }
+      } catch (error) {
+        console.error("加载概览统计数据失败", error);
+      }
+    };
+    void preloadStats();
+    return () => {
+      cancelled = true;
+    };
+  }, [project.id]);
+
+  useEffect(() => {
     setPlanTotal(stats?.planTotal ?? 0);
   }, [stats?.planTotal]);
 
