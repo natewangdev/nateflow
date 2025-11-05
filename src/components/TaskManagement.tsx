@@ -308,9 +308,9 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
                       draggable
                       onDragStart={handleLibraryDragStart(action.id)}
                       onDoubleClick={() => handleAddAction(action)}
+                      title="拖拽或双击添加"
                     >
                       <span>{action.name}</span>
-                       <span className="task-actions-library__hint">拖拽或双击添加</span>
                     </div>
                   ))
                 )}
@@ -337,50 +337,52 @@ const TaskWorkflowModal: React.FC<TaskWorkflowModalProps> = ({
                    清空
                 </button>
               </div>
-              {workflow.length === 0 ? (
-                 <div className="task-workflow-placeholder">从左侧拖入动作以构建任务</div>
-              ) : (
-                <div className="task-workflow-sequence">
-                  {workflow.map((node, index) => (
-                    <div key={`${node.id}-${index}`} className="task-workflow-sequence__item">
-                      <div className="task-workflow-node">
-                        <div className="task-workflow-node__name">{node.name}</div>
-                        <div className="task-workflow-node__controls">
-                          <button
-                            type="button"
-                            className="task-workflow-node__control"
-                            onClick={() => handleMove(index, -1)}
-                            disabled={index === 0}
-                             aria-label="上移"
-                          >
-                            <FiArrowUp />
-                          </button>
-                          <button
-                            type="button"
-                            className="task-workflow-node__control"
-                            onClick={() => handleMove(index, 1)}
-                            disabled={index === workflow.length - 1}
-                             aria-label="下移"
-                          >
-                            <FiArrowDown />
-                          </button>
-                          <button
-                            type="button"
-                            className="task-workflow-node__control task-workflow-node__control--danger"
-                            onClick={() => handleRemove(index)}
-                             aria-label="移除"
-                          >
-                            <FiX />
-                          </button>
+              <div className="task-workflow-canvas__scroll">
+                {workflow.length === 0 ? (
+                  <div className="task-workflow-placeholder">从左侧拖入动作以构建任务</div>
+                ) : (
+                  <div className="task-workflow-sequence">
+                    {workflow.map((node, index) => (
+                      <div key={`${node.id}-${index}`} className="task-workflow-sequence__item">
+                        <div className="task-workflow-node">
+                          <div className="task-workflow-node__name">{node.name}</div>
+                          <div className="task-workflow-node__controls">
+                            <button
+                              type="button"
+                              className="task-workflow-node__control"
+                              onClick={() => handleMove(index, -1)}
+                              disabled={index === 0}
+                              aria-label="上移"
+                            >
+                              <FiArrowUp />
+                            </button>
+                            <button
+                              type="button"
+                              className="task-workflow-node__control"
+                              onClick={() => handleMove(index, 1)}
+                              disabled={index === workflow.length - 1}
+                              aria-label="下移"
+                            >
+                              <FiArrowDown />
+                            </button>
+                            <button
+                              type="button"
+                              className="task-workflow-node__control task-workflow-node__control--danger"
+                              onClick={() => handleRemove(index)}
+                              aria-label="移除"
+                            >
+                              <FiX />
+                            </button>
+                          </div>
                         </div>
+                        {index < workflow.length - 1 ? (
+                          <FiArrowRight className="task-workflow-arrow" aria-hidden="true" />
+                        ) : null}
                       </div>
-                      {index < workflow.length - 1 ? (
-                        <FiArrowRight className="task-workflow-arrow" aria-hidden="true" />
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           {error ? <div className="task-modal-error">{error}</div> : null}
