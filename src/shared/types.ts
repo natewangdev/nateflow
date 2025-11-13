@@ -34,7 +34,7 @@ export interface TemplatePayload {
   id?: string;
   name: string;
   description: string;
-  content: TemplateContent;
+  content: TemplateContent | string;
 }
 
 export type ActionContent = Record<string, unknown>;
@@ -55,7 +55,7 @@ export interface ActionPayload {
   name: string;
   templateId: string;
   templateName: string;
-  content: ActionContent;
+  content: ActionContent | string;
 }
 
 export interface Task {

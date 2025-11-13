@@ -17,6 +17,7 @@ import ProjectListPage from "./pages/ProjectListPage";
 import ProjectDashboard from "./pages/ProjectDashboard";
 import ProjectModal from "./components/ProjectModal";
 import SettingsDialog from "./components/SettingsDialog";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AppSettings,
   Project,
@@ -42,57 +43,6 @@ type DashboardStats = {
 
 const applyTheme = (theme: ThemeMode) => {
   document.documentElement.setAttribute("data-theme", theme);
-};
-
-const useProjectsData = () => {
-  const api = window.api ?? null;
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [loadingProjects, setLoadingProjects] = useState(false);
-
-  const fetchProjects = useCallback(async () => {
-    if (!api) {
-      console.error("window.api 尚未初始化，暂无法获取项目列表");
-      return;
-    }
-    setLoadingProjects(true);
-    try {
-      const list = await api.getProjects();
-      setProjects(list);
-    } catch (error) {
-      console.error("加载项目列表失败", error);
-    } finally {
-      setLoadingProjects(false);
-    }
-  }, [api]);
-
-  useEffect(() => {
-    const init = async () => {
-      try {
-        if (api) {
-          const loadedSettings = await api.getSettings();
-          setSettings(loadedSettings);
-          applyTheme(loadedSettings.theme);
-        } else {
-          console.warn("window.api 尚未就绪，将等待后续交互");
-        }
-      } catch (error) {
-        console.error("加载设置失败", error);
-      }
-      await fetchProjects();
-    };
-    void init();
-  }, [fetchProjects, api]);
-
-  return {
-    api,
-    projects,
-    settings,
-    setSettings,
-    setProjects,
-    loadingProjects,
-    fetchProjects
-  };
 };
 
 const ProjectDashboardRoute: React.FC<{
@@ -139,15 +89,10 @@ const ProjectDashboardRoute: React.FC<{
 };
 
 const AppContent: React.FC = () => {
-  const {
-    api,
-    projects,
-    settings,
-    setSettings,
-    setProjects,
-    loadingProjects,
-    fetchProjects
-  } = useProjectsData();
+  const api = window.api ?? null;
+  const bridgeReady = Boolean(api);
+  const queryClient = useQueryClient();
+  const [templateTotal, setTemplateTotal] = useState(0);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [projectModal, setProjectModal] = useState<{
     open: boolean;
@@ -158,10 +103,84 @@ const AppContent: React.FC = () => {
     mode: "create"
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [templateTotal, setTemplateTotal] = useState(0);
 
   const location = useLocation();
   const navigate = useNavigate();
+  const ensureApi = useCallback(() => {
+    if (!api) {
+      throw new Error("系统桥接尚未就绪");
+    }
+    return api;
+  }, [api]);
+
+  const settingsQuery = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => ensureApi().getSettings(),
+    enabled: bridgeReady,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const projectsQuery = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => ensureApi().getProjects(),
+    enabled: bridgeReady
+  });
+
+  const templatesQuery = useQuery({
+    queryKey: ["templates"],
+    queryFn: () => ensureApi().getTemplates(),
+    enabled: bridgeReady
+  });
+
+  const projects = projectsQuery.data ?? [];
+  const settings = settingsQuery.data ?? null;
+  const loadingProjects = projectsQuery.isLoading && projects.length === 0;
+
+  useEffect(() => {
+    const theme = settings?.theme;
+    if (theme) {
+      applyTheme(theme);
+    }
+  }, [settings?.theme]);
+
+  useEffect(() => {
+    if (templatesQuery.data) {
+      setTemplateTotal(templatesQuery.data.length);
+    }
+  }, [templatesQuery.data]);
+
+  const saveProjectMutation = useMutation({
+    mutationFn: async (payload: { mode: "create" | "edit"; data: ProjectPayload; id?: string }) => {
+      const client = ensureApi();
+      if (payload.mode === "create") {
+        await client.createProject(payload.data);
+      } else if (payload.id) {
+        await client.updateProject(payload.id, payload.data);
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    }
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      await ensureApi().deleteProject(projectId);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    }
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (payload: Partial<AppSettings>) => ensureApi().updateSettings(payload),
+    onSuccess: (updated) => {
+      applyTheme(updated.theme);
+      queryClient.setQueryData(["settings"], updated);
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["templates"] });
+    }
+  });
 
   useEffect(() => {
     const handleGlobalClick = () => setContextMenu(null);
@@ -176,22 +195,6 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     setContextMenu(null);
   }, [location.pathname]);
-
-  const refreshTemplateTotal = useCallback(async () => {
-    if (!api) {
-      return;
-    }
-    try {
-      const templates = await api.getTemplates();
-      setTemplateTotal(templates.length);
-    } catch (error) {
-      console.error("加载模板统计失败", error);
-    }
-  }, [api]);
-
-  useEffect(() => {
-    void refreshTemplateTotal();
-  }, [refreshTemplateTotal]);
 
   const handlePickDirectory = useCallback(async () => {
     if (!api) {
@@ -245,8 +248,7 @@ const AppContent: React.FC = () => {
       return;
     }
     try {
-      await api.deleteProject(project.id);
-      await fetchProjects();
+      await deleteProjectMutation.mutateAsync(project.id);
     } catch (error) {
       console.error("删除项目失败", error);
       window.alert("删除项目失败，请检查日志。");
@@ -256,17 +258,12 @@ const AppContent: React.FC = () => {
   };
 
   const handleSaveProject = async (payload: ProjectPayload) => {
-    if (!api) {
-      console.error("window.api 尚未初始化，无法保存项目");
-      return;
-    }
     try {
-      if (projectModal.mode === "create") {
-        await api.createProject(payload);
-      } else if (projectModal.project) {
-        await api.updateProject(projectModal.project.id, payload);
-      }
-      await fetchProjects();
+      await saveProjectMutation.mutateAsync({
+        mode: projectModal.mode,
+        id: projectModal.project?.id,
+        data: payload
+      });
       setProjectModal((prev) => ({ ...prev, open: false }));
     } catch (error) {
       console.error("保存项目失败", error);
@@ -275,16 +272,9 @@ const AppContent: React.FC = () => {
   };
 
   const handleSettingsSave = async (data: Partial<AppSettings>) => {
-    if (!api) {
-      console.error("window.api 尚未初始化，无法保存系统设置");
-      return;
-    }
     try {
-      const next = await api.updateSettings(data);
-      setSettings(next);
-      applyTheme(next.theme);
+      await updateSettingsMutation.mutateAsync(data);
       setSettingsOpen(false);
-      await fetchProjects();
     } catch (error) {
       console.error("保存设置失败", error);
       window.alert("保存设置失败，请检查日志。");

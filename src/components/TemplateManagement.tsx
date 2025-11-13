@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FiEdit2, FiTrash, FiTrash2 } from "react-icons/fi";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import TemplateModal from "./TemplateModal";
 import type { Template, TemplateContent } from "../shared/types";
 
@@ -11,8 +12,7 @@ const pageSize = 15;
 
 const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }) => {
   const api = window.api ?? null;
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [searchInput, setSearchInput] = useState("");
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
@@ -22,29 +22,30 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
   const [error, setError] = useState<string | null>(null);
   const [batchDeleting, setBatchDeleting] = useState(false);
 
-  const fetchTemplates = useCallback(async () => {
+  const ensureApi = useCallback(() => {
     if (!api) {
-      setError("系统桥接尚未就绪，无法获取模板数据");
-      return;
+      throw new Error("系统桥接尚未就绪，无法获取模板数据");
     }
-    setLoading(true);
-    try {
-      const list = await api.getTemplates();
-      setTemplates(list);
+    return api;
+  }, [api]);
+
+  const templatesQuery = useQuery({
+    queryKey: ["templates"],
+    queryFn: () => ensureApi().getTemplates(),
+    enabled: Boolean(api),
+    onSuccess: (list) => {
       setSelectedIds([]);
-      onTotalChange?.(list.length);
       setError(null);
-    } catch (err) {
+      onTotalChange?.(list.length);
+    },
+    onError: (err) => {
       console.error("加载模板失败", err);
       setError("加载模板列表失败，请稍后重试");
-    } finally {
-      setLoading(false);
     }
-  }, [api, onTotalChange]);
+  });
 
-  useEffect(() => {
-    void fetchTemplates();
-  }, [fetchTemplates]);
+  const templates = templatesQuery.data ?? [];
+  const loading = templatesQuery.isLoading && templates.length === 0;
 
   const filteredTemplates = useMemo(() => {
     if (!keyword.trim()) {
@@ -100,59 +101,78 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
     setModalOpen(false);
   };
 
-  const handleSaveTemplate = async (payload: {
-    id?: string;
-    name: string;
-    description: string;
-    content: TemplateContent;
-  }) => {
-    if (!api) {
-      window.alert("系统桥接尚未就绪，无法保存模板");
-      return;
-    }
-    try {
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (payload: {
+      id?: string;
+      name: string;
+      description: string;
+      content: TemplateContent;
+    }) => {
+      const client = ensureApi();
       if (payload.id) {
-        await api.updateTemplate(payload.id, {
+        await client.updateTemplate(payload.id, {
           id: payload.id,
           name: payload.name,
           description: payload.description,
           content: payload.content
         });
       } else {
-        await api.createTemplate({
+        await client.createTemplate({
           name: payload.name,
           description: payload.description,
           content: payload.content
         });
       }
+    },
+    onSuccess: () => {
       setModalOpen(false);
-      await fetchTemplates();
-    } catch (err) {
+      void queryClient.invalidateQueries({ queryKey: ["templates"] });
+    },
+    onError: (err) => {
       console.error("保存模板失败", err);
       window.alert((err as Error).message ?? "保存模板失败");
+    }
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      await ensureApi().deleteTemplate(templateId);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["templates"] });
+    },
+    onError: (err) => {
+      console.error("删除模板失败", err);
+      window.alert((err as Error).message ?? "删除模板失败，请稍后再试");
+    }
+  });
+
+  const handleSaveTemplate = async (payload: {
+    id?: string;
+    name: string;
+    description: string;
+    content: TemplateContent;
+  }) => {
+    try {
+      await saveTemplateMutation.mutateAsync(payload);
+    } catch {
+      // 错误已在 mutation onError 中处理
     }
   };
 
   const handleDeleteTemplate = async (template: Template) => {
-    if (!api) {
-      window.alert("系统桥接尚未就绪，无法删除模板");
-      return;
-    }
-    const confirmed = window.confirm(`确认删除模板「${template.name}」吗？`);
-    if (!confirmed) {
+    if (!window.confirm(`确认删除模板「${template.name}」吗？`)) {
       return;
     }
     try {
-      await api.deleteTemplate(template.id);
-      await fetchTemplates();
-    } catch (err) {
-      console.error("删除模板失败", err);
-      window.alert((err as Error).message ?? "删除模板失败，请稍后再试");
+      await deleteTemplateMutation.mutateAsync(template.id);
+    } catch {
+      // 错误已在 mutation onError 中处理
     }
   };
 
   const handleBatchDelete = async () => {
-    if (!api || selectedIds.length === 0) {
+    if (selectedIds.length === 0) {
       return;
     }
     const templatesToDelete = templates.filter((template) =>
@@ -165,9 +185,8 @@ const TemplateManagement: React.FC<TemplateManagementProps> = ({ onTotalChange }
     try {
       setBatchDeleting(true);
       for (const template of templatesToDelete) {
-        await api.deleteTemplate(template.id);
+        await deleteTemplateMutation.mutateAsync(template.id);
       }
-      await fetchTemplates();
     } catch (err) {
       console.error("批量删除模板失败", err);
       window.alert((err as Error).message ?? "批量删除模板失败，请稍后再试");
