@@ -183,12 +183,28 @@ const AppContent: React.FC = () => {
   });
 
   useEffect(() => {
-    const handleGlobalClick = () => setContextMenu(null);
+    const handleGlobalClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      // 如果点击的是输入框、文本域、按钮等可交互元素，不关闭上下文菜单
+      // 这样可以避免干扰输入框的正常点击行为
+      const isInteractiveElement =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.tagName === "BUTTON" ||
+        target.isContentEditable ||
+        target.closest("input, textarea, select, button, [contenteditable]");
+      
+      if (!isInteractiveElement) {
+        setContextMenu(null);
+      }
+    };
+    const handleWheel = () => setContextMenu(null);
     window.addEventListener("mousedown", handleGlobalClick);
-    window.addEventListener("wheel", handleGlobalClick);
+    window.addEventListener("wheel", handleWheel);
     return () => {
       window.removeEventListener("mousedown", handleGlobalClick);
-      window.removeEventListener("wheel", handleGlobalClick);
+      window.removeEventListener("wheel", handleWheel);
     };
   }, []);
 
